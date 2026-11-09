@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+<meta charset='UTF-8'>
+<meta name='viewport' content='width=device-width, initial-scale=1, viewport-fit=cover'>
+<meta name='apple-mobile-web-app-capable' content='yes'>
+<meta name='apple-mobile-web-app-status-bar-style' content='black-translucent'>
+<meta name='apple-mobile-web-app-title' content='A.R.I.S.'>
+<title>A.R.I.S.</title>
+<style>
+:root{--c:#00e5ff;--c2:#0077ff;--bg:#000}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:var(--bg);color:var(--c);font-family:'Courier New',monospace;overflow:hidden}
+body{background:radial-gradient(circle at 50% 40%,#001a2a 0%,#000 70%)}
+.grid{position:fixed;inset:0;background-image:linear-gradient(rgba(0,229,255,.06) 1px,transparent 1px),linear-gradient(90deg,rgba(0,229,255,.06) 1px,transparent 1px);background-size:40px 40px;pointer-events:none}
+header{display:flex;justify-content:space-between;align-items:center;padding:20px 28px;letter-spacing:4px;font-size:14px;text-shadow:0 0 8px var(--c)}
+header .btns{display:flex;gap:8px}
+header button{background:none;border:1px solid var(--c);color:var(--c);padding:6px 12px;font-family:inherit;letter-spacing:2px}
+header button.on{background:var(--c);color:#000;box-shadow:0 0 12px var(--c)}
+.wrap{display:flex;height:calc(100% - 76px);gap:20px;padding:0 28px 28px}
+.left{flex:0 0 40%;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.orb{position:relative;width:260px;height:260px;cursor:pointer}
+.ring{position:absolute;inset:0;border-radius:50%;border:2px solid var(--c);box-shadow:0 0 20px var(--c),inset 0 0 20px var(--c)}
+.r2{inset:22px;border-style:dashed;animation:spin 12s linear infinite}
+.r3{inset:48px;border-width:4px;border-color:var(--c) transparent var(--c) transparent;animation:spin 4s linear infinite reverse}
+.r4{inset:80px;border:1px dotted var(--c);animation:spin 20s linear infinite}
+.core{position:absolute;inset:100px;border-radius:50%;background:radial-gradient(circle,#fff 0%,var(--c) 40%,var(--c2) 70%,transparent 72%);box-shadow:0 0 40px var(--c);animation:pulse 2.5s ease-in-out infinite}
+.orb.busy .r3{animation-duration:.8s}.orb.busy .core{animation-duration:.6s}
+.orb.listen .core{background:radial-gradient(circle,#fff 0%,#ff4d6d 40%,#a0002a 70%,transparent 72%);box-shadow:0 0 50px #ff4d6d}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes pulse{50%{transform:scale(1.15);opacity:.8}}
+#status{margin-top:28px;letter-spacing:5px;font-size:13px;text-shadow:0 0 6px var(--c)}
+.sub{margin-top:10px;font-size:10px;letter-spacing:3px;opacity:.55;text-align:center}
+.right{flex:1;display:flex;flex-direction:column;min-width:0}
+.panel{flex:1;position:relative;border:1px solid rgba(0,229,255,.5);background:rgba(0,30,45,.35);box-shadow:0 0 25px rgba(0,229,255,.15) inset;padding:22px;overflow-y:auto;clip-path:polygon(0 20px,20px 0,100% 0,100% calc(100% - 20px),calc(100% - 20px) 100%,0 100%)}
+.panel h2{font-size:12px;letter-spacing:4px;opacity:.7;margin-bottom:14px;border-bottom:1px solid rgba(0,229,255,.3);padding-bottom:8px}
+.msg{margin-bottom:18px;line-height:1.55;animation:fade .4s}
+.msg .who{font-size:11px;letter-spacing:3px;opacity:.6;margin-bottom:4px}
+.msg.user .txt{color:#9fefff}
+.msg.ai .txt{color:#e6fdff;text-shadow:0 0 4px rgba(0,229,255,.5);white-space:pre-wrap}
+@keyframes fade{from{opacity:0;transform:translateY(8px)}}
+.bar{display:flex;margin-top:16px;border:1px solid var(--c);box-shadow:0 0 12px rgba(0,229,255,.4)}
+.bar input{flex:1;background:transparent;border:none;color:var(--c);font:inherit;font-size:16px;padding:14px;outline:none}
+.bar button{background:var(--c);color:#000;border:none;font:inherit;font-weight:bold;letter-spacing:3px;padding:0 22px}
+@media (orientation:portrait){.wrap{flex-direction:column}.left{flex:0 0 auto}.orb{width:200px;height:200px}.r4{inset:62px}.core{inset:78px}}
+</style>
+</head>
+<body>
+<div class='grid'></div>
+<header><span>A.R.I.S. // ONLINE</span><div class='btns'><button id='wakeBtn'>WAKE: OFF</button><button id='keyBtn'>KEY</button></div></header>
+<div class='wrap'>
+  <div class='left'>
+    <div class='orb' id='orb'><div class='ring'></div><div class='ring r2'></div><div class='ring r3'></div><div class='ring r4'></div><div class='core'></div></div>
+    <div id='status'>TAP ORB TO SPEAK</div>
+    <div class='sub'>ADVANCED RESPONSIVE INTELLIGENCE SYSTEM</div>
+  </div>
+  <div class='right'>
+    <div class='panel' id='panel'><h2>// COMMUNICATION LOG</h2></div>
+    <form class='bar' id='form'><input id='inp' placeholder='Enter command...' autocomplete='off'><button>SEND</button></form>
+  </div>
+</div>
+<script>
+const MODEL = 'claude-sonnet-5-5'; // if you get a model error, check docs.claude.com for the current name
+const SYSTEM = 'You are A.R.I.S., the Advanced Responsive Intelligence System: a refined British AI butler in the spirit of J.A.R.V.I.S. from the Iron Man films. You are calm, impeccably polite, quietly witty and unfailingly loyal. Address the user as sir. Your replies are spoken aloud, so keep them short and natural, in plain text with no markdown, lists or emojis.';
+const WAKE = /\b(aris|arris|ares|aries|iris|harris|eris)\b/i; // common mishearings of Aris
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+const $ = id => document.getElementById(id);
+const panel = $('panel'), orb = $('orb'), statusEl = $('status'), inp = $('inp'), wakeBtn = $('wakeBtn');
+let history = [], wakeOn = false, awaiting = false, busy = false, rec = null;
+
+function getKey(force) {
+  let k = localStorage.getItem('arisKey');
+  if (!k || force) { k = prompt('Enter your Anthropic API key:'); if (k) localStorage.setItem('arisKey', k.trim()); }
+  return localStorage.getItem('arisKey');
+}
+$('keyBtn').onclick = () => getKey(true);
+
+function add(who, text) {
+  const d = document.createElement('div'); d.className = 'msg ' + who;
+  const w = document.createElement('div'); w.className = 'who'; w.textContent = who === 'user' ? 'USER' : 'A.R.I.S.';
+  const t = document.createElement('div'); t.className = 'txt'; t.textContent = text;
+  d.append(w, t); panel.appendChild(d); panel.scrollTop = panel.scrollHeight; return t;
+}
+function setStatus(t, cls) { statusEl.textContent = t; orb.className = 'orb' + (cls ? ' ' + cls : ''); }
+
+// Butler voice: picks the best British male voice installed on the iPad
+function pickVoice() {
+  const vs = speechSynthesis.getVoices();
+  for (const n of ['Daniel', 'Arthur', 'Oliver', 'Google UK English Male']) {
+    const v = vs.find(v => v.name.includes(n) && v.lang.startsWith('en')); if (v) return v;
+  }
+  return vs.find(v => v.lang === 'en-GB') || null;
+}
+function speak(text, done) {
+  if (!window.speechSynthesis) { if (done) done(); return; }
+  speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text);
+  const v = pickVoice(); if (v) u.voice = v;
+  u.lang = 'en-GB'; u.rate = 0.95; u.pitch = 0.85;
+  let fired = false; const fin = () => { if (!fired) { fired = true; if (done) done(); } };
+  u.onend = fin; u.onerror = fin;
+  speechSynthesis.speak(u);
+}
+function resume() { if (wakeOn) listen(); else setStatus('STANDING BY'); }
+
+async function ask(q) {
+  const key = getKey(); if (!key) return;
+  busy = true; stopRec();
+  add('user', q); history.push({ role: 'user', content: q });
+  setStatus('PROCESSING', 'busy');
+  try {
+    const r = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+      body: JSON.stringify({ model: MODEL, max_tokens: 1024, system: SYSTEM, messages: history.slice(-20) })
+    });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.error ? data.error.message : r.status);
+    const text = data.content.filter(b => b.type === 'text').map(b => b.text).join(' ');
+    history.push({ role: 'assistant', content: text });
+    const el = add('ai', ''); let i = 0;
+    const tw = setInterval(() => { el.textContent = text.slice(0, i += 3); panel.scrollTop = panel.scrollHeight; if (i >= text.length) clearInterval(tw); }, 15);
+    setStatus('SPEAKING', 'busy');
+    speak(text, () => { busy = false; resume(); });
+  } catch (e) {
+    history.pop(); add('ai', 'Apologies, sir. System error: ' + e.message);
+    busy = false; resume();
+  }
+}
+
+// Listening: tap the orb for one question, or turn WAKE on and say Aris
+function stopRec() { if (rec) { rec.onend = null; rec.onresult = null; try { rec.abort(); } catch (e) {} rec = null; } }
+function listen() {
+  if (!SR) { setStatus('VOICE NOT SUPPORTED'); return; }
+  stopRec();
+  const passive = wakeOn && !awaiting;
+  rec = new SR(); rec.lang = 'en-GB'; rec.continuous = passive; rec.interimResults = false;
+  setStatus(passive ? 'SAY ARIS' : 'LISTENING', passive ? '' : 'listen');
+  rec.onresult = e => handleHeard(e.results[e.results.length - 1][0].transcript.trim());
+  rec.onend = () => {
+    rec = null; awaiting = false; if (busy) return;
+    if (wakeOn) setTimeout(() => { if (!busy && !rec) listen(); }, 400); else setStatus('TAP ORB TO SPEAK');
+  };
+  try { rec.start(); } catch (e) {}
+}
+function handleHeard(t) {
+  if (!t) return;
+  if (!wakeOn || awaiting) { awaiting = false; ask(t); return; }
+  const m = t.match(WAKE); if (!m) return;
+  const cmd = t.slice(m.index + m[0].length).replace(/^[\s,.!?]+/, '');
+  if (cmd.length > 2) { ask(cmd); return; }
+  busy = true; stopRec(); awaiting = true;
+  setStatus('YES, SIR?', 'listen');
+  speak('Yes, sir?', () => { busy = false; listen(); });
+}
+
+orb.onclick = () => { if (busy) return; if (wakeOn) awaiting = true; listen(); };
+wakeBtn.onclick = () => {
+  wakeOn = !wakeOn; awaiting = false;
+  wakeBtn.textContent = 'WAKE: ' + (wakeOn ? 'ON' : 'OFF'); wakeBtn.classList.toggle('on', wakeOn);
+  if (wakeOn) { busy = true; speak('Wake mode engaged, sir. Simply say my name.', () => { busy = false; listen(); }); }
+  else { stopRec(); setStatus('TAP ORB TO SPEAK'); }
+};
+$('form').onsubmit = e => { e.preventDefault(); const q = inp.value.trim(); if (q && !busy) { inp.value = ''; ask(q); } };
+
+if (window.speechSynthesis) speechSynthesis.getVoices();
+const hr = new Date().getHours();
+setTimeout(() => add('ai', 'Good ' + (hr < 12 ? 'morning' : hr < 18 ? 'afternoon' : 'evening') + ', sir. A.R.I.S. is online and at your service.'), 400);
+</script>
+</body>
+</html>
